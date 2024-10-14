@@ -1,151 +1,125 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 
 class GoldbachConjecture
 {
-    static List<int> primes = new List<int>();
-    static HashSet<int> primeSet;
-    static bool[] isPrime;
-
-    static void Main(string[] args)
+    static List<int> GetPrimes(int maxNumber)
     {
-        // Step 1: Generate primes up to 100,000
-        GeneratePrimes(100000);
-
-        if (args.Length > 0)
-        {
-            // Step 2: Write results from the file to my_result.txt
-            string resultFilePath = @"C:\Users\19107\Downloads\Goldbach\Goldbach\bin\Debug\net8.0\my_result.txt";
-
-            // Ensure file exists or create it (in overwrite mode)
-            using (StreamWriter writer = new StreamWriter(resultFilePath, false)) { }
-
-            // Read the numbers from the file and write results to my_result.txt
-            List<int> numbersFromFile = GetNumbersFromFile(args[0]);
-
-            foreach (int n in numbersFromFile)
-            {
-                List<(int, int)> goldbachPairs = FindGoldbachPairs(n);
-                OutputResultsToFile(n, goldbachPairs, resultFilePath); // Write results to the file
-            }
-
-            Console.WriteLine("Results written to my_result.txt successfully.");
-        }
-        else
-        {
-            // Step 2: If no file is provided, process default numbers and print them to the console
-            List<int> defaultNumbers = new List<int> { 3, 4, 14, 26, 100 };
-            foreach (int n in defaultNumbers)
-            {
-                List<(int, int)> goldbachPairs = FindGoldbachPairs(n);
-                PrintToConsole(n, goldbachPairs); // Print default results to the console
-            }
-        }
-    }
-
-    // Generate primes using Sieve of Eratosthenes
-    static void GeneratePrimes(int limit)
-    {
-        isPrime = new bool[limit + 1];
+        bool[] isPrime = new bool[maxNumber + 1];
         Array.Fill(isPrime, true);
         isPrime[0] = isPrime[1] = false;
 
-        for (int p = 2; p * p <= limit; p++)
+        for (int i = 2; i * i <= maxNumber; i++)
         {
-            if (isPrime[p])
+            if (isPrime[i])
             {
-                for (int multiple = p * p; multiple <= limit; multiple += p)
+                for (int j = i * i; j <= maxNumber; j += i)
                 {
-                    isPrime[multiple] = false;
+                    isPrime[j] = false;
                 }
             }
         }
 
-        primeSet = new HashSet<int>();
-        for (int i = 2; i <= limit; i++)
+        List<int> primes = new List<int>();
+        for (int i = 2; i <= maxNumber; i++)
         {
             if (isPrime[i])
             {
                 primes.Add(i);
-                primeSet.Add(i); // Add to HashSet for faster lookup
             }
         }
+        return primes;
     }
 
-    // Find Goldbach pairs for a given number n
-    static List<(int, int)> FindGoldbachPairs(int n)
+    static List<(int, int)> Goldbach(int value, HashSet<int> primeSet)
     {
-        List<(int, int)> goldbachPairs = new List<(int, int)>();
+        List<(int, int)> result = new List<(int, int)>();
 
-        // If the number is less than 4 or odd, return an empty list (no pairs)
-        if (n < 4 || n % 2 != 0)
-            return goldbachPairs;
-
-        // Find Goldbach pairs for even numbers >= 4
-        foreach (int p in primes)
+        foreach (int prime in primeSet)
         {
-            if (p > n / 2)
-                break;
+            if (prime > value / 2) break;
 
-            int q = n - p;
-            if (primeSet.Contains(q))
+            int difference = value - prime;
+            if (primeSet.Contains(difference))
             {
-                goldbachPairs.Add((p, q));
+                result.Add((prime, difference));
             }
         }
 
-        return goldbachPairs;
+        return result;
     }
-
-    // Read numbers from file
-    static List<int> GetNumbersFromFile(string filename)
+    static void PrintGoldbach(int value, List<(int, int)> primePairs)
     {
-        return File.ReadAllLines(filename)
-                   .Select(int.Parse)
-                   .Where(x => x % 2 == 0 && x >= 4 && x <= 100000) // Only even numbers >= 4
-                   .ToList();
-    }
-
-    // Output results to console (for default numbers)
-    static void PrintToConsole(int n, List<(int, int)> goldbachPairs)
-    {
-        if (n < 4 || n % 2 != 0)  // Handle odd and numbers < 4
+        if (primePairs.Count == 0)
         {
-            Console.WriteLine($"We found 0 Goldbach pair(s) for {n}.");
+            Console.WriteLine($"We found no Goldbach pair(s) for {value}.");
         }
         else
         {
-            Console.WriteLine($"We found {goldbachPairs.Count} Goldbach pair(s) for {n}.");
-            foreach (var pair in goldbachPairs.OrderBy(p => p.Item1))
+            Console.WriteLine($"We found {primePairs.Count} Goldbach pair(s) for {value}:");
+            foreach (var (p, q) in primePairs)
             {
-                Console.WriteLine($"{n} = {pair.Item1} + {pair.Item2}");
+                Console.WriteLine($"{value} = {p} + {q}");
             }
         }
-        Console.WriteLine(); // Blank line for separation
-    }
 
-    // Output results to file (for data.txt)
-    static void OutputResultsToFile(int n, List<(int, int)> goldbachPairs, string resultFilePath)
+        Console.WriteLine();  // Blank line
+    }
+    static List<int> ReadInput(string[] args)
     {
-        // Append the results to the file
-        using (StreamWriter writer = new StreamWriter(resultFilePath, true))
+        List<int> data = new List<int>();
+
+        if (args.Length > 0 && File.Exists(args[0])) // Handle file input.
         {
-            if (n < 4 || n % 2 != 0)  // Handle odd and numbers < 4
+            foreach (string line in File.ReadLines(args[0]))
             {
-                writer.WriteLine($"We found 0 Goldbach pair(s) for {n}.");
-            }
-            else
-            {
-                writer.WriteLine($"We found {goldbachPairs.Count} Goldbach pair(s) for {n}.");
-                foreach (var pair in goldbachPairs.OrderBy(p => p.Item1))
+                if (int.TryParse(line, out int num) && num >= 4 && num <= 100000 && num % 2 == 0)
                 {
-                    writer.WriteLine($"{n} = {pair.Item1} + {pair.Item2}");
+                    data.Add(num);
+                }
+            }
+        }
+        else
+        {
+            // Try to parse command-line arguments as numbers.
+            foreach (string arg in args)
+            {
+                if (int.TryParse(arg, out int num))
+                {
+                    data.Add(num);
                 }
             }
 
-            writer.WriteLine(); // Blank line for separation
+            // Use default values if no valid numbers were provided.
+            if (data.Count == 0)
+            {
+                data = new List<int> { 3, 4, 14, 26, 100 };
+            }
+        }
+
+        return data;
+    }
+
+    static void Main(string[] args)
+    {
+        const int MaxValue = 100000;
+        List<int> primes = GetPrimes(MaxValue);
+        HashSet<int> primeSet = new HashSet<int>(primes);
+
+        List<int> inputNumbers = ReadInput(args);
+
+        foreach (int value in inputNumbers)
+        {
+            // Only attempt Goldbach pairs for valid even numbers.
+            if (value < 4 || value > MaxValue || value % 2 != 0)
+            {
+                Console.WriteLine($"We found no Goldbach pair(s) for {value}.");
+                continue;
+            }
+
+            List<(int, int)> primePairs = Goldbach(value, primeSet);
+            PrintGoldbach(value, primePairs);
         }
     }
 }
